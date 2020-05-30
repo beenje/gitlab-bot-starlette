@@ -5,6 +5,7 @@ import gidgetlab.routing
 import gidgetlab.sansio
 import gidgetlab.httpx
 from starlette.applications import Starlette
+from starlette.background import BackgroundTask
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.routing import Route
@@ -46,8 +47,8 @@ async def webhook(request: Request) -> Response:
     body = await request.body()
     secret = os.environ.get("GL_SECRET")
     event = gidgetlab.sansio.Event.from_http(request.headers, body, secret=secret)
-    await router.dispatch(event, request.app.state.gl)
-    return Response(status_code=200)
+    task = BackgroundTask(router.dispatch, event, request.app.state.gl)
+    return Response(status_code=200, background=task)
 
 
 app = Starlette(
