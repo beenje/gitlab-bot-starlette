@@ -1,13 +1,14 @@
 import datetime
 import os
 import httpx
+import gidgetlab
 import gidgetlab.routing
 import gidgetlab.sansio
 import gidgetlab.httpx
 from starlette.applications import Starlette
 from starlette.background import BackgroundTask
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, PlainTextResponse
 from starlette.routing import Route
 
 router = gidgetlab.routing.Router()
@@ -46,7 +47,12 @@ async def webhook(request: Request) -> Response:
     """Handler that processes GitLab webhook requests"""
     body = await request.body()
     secret = os.environ.get("GL_SECRET")
-    event = gidgetlab.sansio.Event.from_http(request.headers, body, secret=secret)
+    try:
+        event = gidgetlab.sansio.Event.from_http(request.headers, body, secret=secret)
+    except gidgetlab.HTTPException as e:
+        return PlainTextResponse(status_code=e.status_code, content=str(e))
+    except gidgetlab.GitLabException as e:
+        return PlainTextResponse(status_code=500, content=str(e))
     task = BackgroundTask(router.dispatch, event, request.app.state.gl)
     return Response(status_code=200, background=task)
 
