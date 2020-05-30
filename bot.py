@@ -1,3 +1,4 @@
+import datetime
 import os
 import httpx
 import gidgetlab.routing
@@ -22,9 +23,9 @@ async def issue_opened_event(event, gl, *args, **kwargs):
 @router.register("Push Hook")
 async def dummy_action_on_push(event, gl, *args, **kwargs):
     print(f"Received {event.event}")
-    print("Triggering some action...")
-    await gl.sleep(1)
-    print("Action done")
+    print(f"Triggering some action at {datetime.datetime.utcnow()}...")
+    await gl.sleep(5)
+    print(f"Action done at {datetime.datetime.utcnow()}")
 
 
 async def create_client() -> None:
