@@ -19,6 +19,14 @@ async def issue_opened_event(event, gl, *args, **kwargs):
     await gl.post(url, data={"body": message})
 
 
+@router.register("Push Hook")
+async def dummy_action_on_push(event, gl, *args, **kwargs):
+    print(f"Received {event.event}")
+    print("Triggering some action...")
+    await gl.sleep(1)
+    print("Action done")
+
+
 async def webhook(request: Request) -> Response:
     """Handler that processes GitLab webhook requests"""
     body = await request.body()
