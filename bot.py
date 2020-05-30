@@ -27,17 +27,30 @@ async def dummy_action_on_push(event, gl, *args, **kwargs):
     print("Action done")
 
 
+async def create_client() -> None:
+    """Startup handler that creates the GitLabAPI instance"""
+    client = httpx.AsyncClient()
+    app.state.gl = gidgetlab.httpx.GitLabAPI(
+        client, "gidgetlab", access_token=os.environ.get("GL_ACCESS_TOKEN")
+    )
+
+
+async def close_client() -> None:
+    """Shutdown handler that closes the httpx client"""
+    await app.state.gl._client.aclose()
+
+
 async def webhook(request: Request) -> Response:
     """Handler that processes GitLab webhook requests"""
     body = await request.body()
     secret = os.environ.get("GL_SECRET")
     event = gidgetlab.sansio.Event.from_http(request.headers, body, secret=secret)
-    async with httpx.AsyncClient() as client:
-        gl = gidgetlab.httpx.GitLabAPI(
-            client, "gidgetlab", access_token=os.environ.get("GL_ACCESS_TOKEN")
-        )
-        await router.dispatch(event, gl)
+    await router.dispatch(event, request.app.state.gl)
     return Response(status_code=200)
 
 
-app = Starlette(routes=[Route("/", webhook, methods=["POST"])])
+app = Starlette(
+    routes=[Route("/", webhook, methods=["POST"])],
+    on_startup=[create_client],
+    on_shutdown=[close_client],
+)
